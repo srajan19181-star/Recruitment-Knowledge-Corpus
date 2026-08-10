@@ -1,0 +1,81 @@
+{
+  "title": "RAG Pipeline",
+  "uid": "rag-pipeline",
+  "timezone": "browser",
+  "schemaVersion": 39,
+  "version": 1,
+  "refresh": "5s",
+  "time": { "from": "now-1h", "to": "now" },
+  "panels": [
+    {
+      "id": 1,
+      "title": "Request rate by status",
+      "type": "timeseries",
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 0 },
+      "targets": [
+        {
+          "expr": "sum(rate(rag_requests_total[1m])) by (status)",
+          "legendFormat": "{{status}}"
+        }
+      ]
+    },
+    {
+      "id": 2,
+      "title": "Cache hit rate",
+      "type": "stat",
+      "gridPos": { "h": 8, "w": 6, "x": 12, "y": 0 },
+      "targets": [
+        {
+          "expr": "sum(rate(rag_cache_hits_total[5m])) / (sum(rate(rag_cache_hits_total[5m])) + sum(rate(rag_cache_misses_total[5m])))"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": { "unit": "percentunit", "min": 0, "max": 1 }
+      }
+    },
+    {
+      "id": 3,
+      "title": "Rate limit rejections",
+      "type": "stat",
+      "gridPos": { "h": 8, "w": 6, "x": 18, "y": 0 },
+      "targets": [
+        { "expr": "sum(increase(rag_rate_limit_rejections_total[5m]))" }
+      ]
+    },
+    {
+      "id": 4,
+      "title": "p50 / p95 / p99 latency by stage",
+      "type": "timeseries",
+      "gridPos": { "h": 10, "w": 24, "x": 0, "y": 8 },
+      "targets": [
+        {
+          "expr": "histogram_quantile(0.50, sum(rate(rag_stage_latency_seconds_bucket[5m])) by (le, stage))",
+          "legendFormat": "p50 {{stage}}"
+        },
+        {
+          "expr": "histogram_quantile(0.95, sum(rate(rag_stage_latency_seconds_bucket[5m])) by (le, stage))",
+          "legendFormat": "p95 {{stage}}"
+        },
+        {
+          "expr": "histogram_quantile(0.99, sum(rate(rag_stage_latency_seconds_bucket[5m])) by (le, stage))",
+          "legendFormat": "p99 {{stage}}"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": { "unit": "s" }
+      }
+    },
+    {
+      "id": 5,
+      "title": "Chunks retrieved per query",
+      "type": "timeseries",
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 18 },
+      "targets": [
+        {
+          "expr": "histogram_quantile(0.50, sum(rate(rag_chunks_retrieved_bucket[5m])) by (le))",
+          "legendFormat": "median chunks used"
+        }
+      ]
+    }
+  ]
+}
