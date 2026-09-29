@@ -33,3 +33,8 @@ CHUNKS_RETRIEVED = Histogram(
     "Number of chunks used in the final fused context",
     buckets=(0, 1, 2, 3, 5, 7, 10, 15, 20),
 )
+
+LLM_ERRORS = Counter(
+    "rag_llm_errors_total",
+    "Total number of errors encountered during LLM generation",
+)

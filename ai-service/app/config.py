@@ -4,14 +4,19 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 class Settings(BaseSettings):
     model_config = SettingsConfigDict(env_file=".env")
 
+    # Provider: "gemini" or "mock"
+    llm_provider: str = "mock"
+    internal_api_key: str = "test-internal-key"
+
     # Gemini
     gemini_api_key: str = ""
-    gemini_model: str = "gemini-3.6-flash"
+    gemini_model: str = "gemini-2.5-flash"
 
     # Qdrant
     qdrant_host: str = "qdrant"
     qdrant_port: int = 6333
     qdrant_collection: str = "rag_chunks"
+    qdrant_cache_collection: str = "semantic_cache"
 
     # Redis
     redis_host: str = "redis"
@@ -26,6 +31,7 @@ class Settings(BaseSettings):
     top_k_sparse: int = 10
     top_k_final: int = 5
     rrf_k: int = 60
+    bm25_index_path: str = "data/bm25_index.json"
 
     # Semantic cache
     cache_similarity_threshold: float = 0.95
