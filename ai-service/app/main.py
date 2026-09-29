@@ -1,6 +1,7 @@
 import asyncio
 from contextlib import asynccontextmanager, contextmanager
 import json
+from pathlib import Path
 import time
 
 from fastapi import FastAPI, HTTPException, Request, Response
@@ -10,6 +11,7 @@ from sse_starlette.sse import EventSourceResponse
 
 from app import cache
 from app.config import settings
+from app.ingestion.ingest import ingest_directory
 from app.llm import stream_answer, validate_gemini_model
 from app.metrics import (
     CACHE_HITS,
@@ -37,12 +39,27 @@ def timed_stage(name: str):
     STAGE_LATENCY.labels(stage=name).observe(time.perf_counter() - start)
 
 
+CORPUS_DIR = Path(__file__).resolve().parent.parent / "data" / "corpus"
+
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     # Startup sequence
     dense.ensure_collection()
     cache.ensure_cache_collection()
     sparse.load_index()
+
+    # Re-ingest the bundled corpus on every boot. Chunk IDs are content-hashed
+    # (see chunking.py), so this is a safe idempotent upsert rather than a
+    # duplication risk. This keeps retrieval populated on hosts with no
+    # persistent disk (e.g. free-tier instances), where a separately-run
+    # ingestion script's on-disk BM25 index would otherwise vanish on restart.
+    if CORPUS_DIR.exists() and any(CORPUS_DIR.glob("*.pdf")):
+        try:
+            ingest_directory(str(CORPUS_DIR), bump_version=False)
+            await cache.bump_corpus_version()
+        except Exception as e:
+            print(f"Startup corpus ingestion failed (continuing with existing index): {e}")
 
     if settings.llm_provider == "gemini":
         await validate_gemini_model()

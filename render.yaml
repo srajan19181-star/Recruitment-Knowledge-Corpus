@@ -32,8 +32,14 @@ services:
       - key: CORS_ORIGIN
         sync: false
 
-  # 2. AI Service (Private Python / FastAPI Service - Not exposed to public internet)
-  - type: pserv
+  # 2. AI Service (Python / FastAPI Service)
+  # NOTE: Render's free tier does not offer the "pserv" (private, non-public)
+  # service type at all - only "web" is available for free. Endpoints stay
+  # gated by the x-internal-api-key check in app/main.py, but this is weaker
+  # isolation than a true private service: anyone who finds the URL can send
+  # requests, they just won't pass auth without the key. Upgrade to a paid
+  # plan and switch this back to "type: pserv" for real network isolation.
+  - type: web
     name: recruiter-ai-service
     env: python
     plan: free
@@ -41,6 +47,8 @@ services:
     buildCommand: pip install -r requirements.txt
     startCommand: uvicorn app.main:app --host 0.0.0.0 --port 8000
     envVars:
+      - key: PORT
+        value: 8000
       - key: LLM_PROVIDER
         value: mock
       - key: GEMINI_API_KEY

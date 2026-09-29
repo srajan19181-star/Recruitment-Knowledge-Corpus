@@ -8,10 +8,16 @@ from app.retrieval.dense import ensure_collection, upsert_chunks
 from app.retrieval.sparse import build_index
 
 
-def ingest_directory(path: str) -> int:
+def ingest_directory(path: str, bump_version: bool = True) -> int:
     """Runs the full offline ingestion pipeline over every PDF in `path`:
     load -> chunk -> embed -> upsert to Qdrant -> rebuild BM25 index.
-    Returns the number of chunks ingested."""
+    Returns the number of chunks ingested.
+
+    `bump_version` controls whether this function bumps the Redis corpus
+    version itself via asyncio.run(). Set it to False when calling from
+    inside an already-running event loop (e.g. FastAPI's async lifespan,
+    where asyncio.run() would raise) and await bump_corpus_version()
+    directly at the call site instead."""
     corpus_dir = Path(path)
     pdf_paths = sorted(corpus_dir.glob("*.pdf"))
     if not pdf_paths:
@@ -37,12 +43,13 @@ def ingest_directory(path: str) -> int:
     print("Building BM25 index...")
     build_index(all_chunks)
 
-    try:
-        import asyncio
-        from app.cache import bump_corpus_version
-        asyncio.run(bump_corpus_version())
-    except Exception:
-        pass
+    if bump_version:
+        try:
+            import asyncio
+            from app.cache import bump_corpus_version
+            asyncio.run(bump_corpus_version())
+        except Exception:
+            pass
 
     print(f"Done. Ingested {len(all_chunks)} chunks from {len(pdf_paths)} documents.")
     return len(all_chunks)
