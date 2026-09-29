@@ -1,25 +1,37 @@
 """
-Sliding-window rate limiter backed by Redis sorted sets.
-
-Why sliding window over token bucket: a user-facing query endpoint should
-have smooth, predictable throttling rather than allow bursts up to bucket
-capacity. Token bucket is the better choice if you want to intentionally
-allow controlled bursting (e.g. a trusted internal batch client) — that
-trade-off is the actual thing to be able to explain, not just "I rate
-limited it."
-
-Algorithm: for key `user_id`, store request timestamps in a sorted set.
-On each request: drop entries older than `window_seconds`, count what's
-left, reject if >= limit, else add the current timestamp.
+Sliding-window rate limiter backed by Redis sorted sets executed atomically
+via Lua script to eliminate race conditions between checking count and adding.
 """
 
 import time
+import uuid
 
 import redis.asyncio as redis
 
 from app.config import settings
 
 _redis = redis.Redis(host=settings.redis_host, port=settings.redis_port, decode_responses=True)
+
+# Atomically prune expired entries, check current count, and append current timestamp
+LUA_SLIDING_WINDOW = """
+local key = KEYS[1]
+local now = tonumber(ARGV[1])
+local window = tonumber(ARGV[2])
+local limit = tonumber(ARGV[3])
+local member = ARGV[4]
+local window_start = now - window
+
+redis.call('ZREMRANGEBYSCORE', key, 0, window_start)
+local current_count = redis.call('ZCARD', key)
+
+if current_count >= limit then
+    return 0
+else
+    redis.call('ZADD', key, now, member)
+    redis.call('EXPIRE', key, math.ceil(window))
+    return 1
+end
+"""
 
 
 class RateLimitExceeded(Exception):
@@ -29,18 +41,21 @@ class RateLimitExceeded(Exception):
 async def check_rate_limit(user_id: str) -> None:
     key = f"ratelimit:{user_id}"
     now = time.time()
-    window_start = now - settings.rate_limit_window_seconds
+    member = f"{now}:{uuid.uuid4().hex[:8]}"
 
-    await _redis.zremrangebyscore(key, 0, window_start)
-    count = await _redis.zcard(key)
+    allowed = await _redis.eval(
+        LUA_SLIDING_WINDOW,
+        1,
+        key,
+        str(now),
+        str(settings.rate_limit_window_seconds),
+        str(settings.rate_limit_requests),
+        member,
+    )
 
-    if count >= settings.rate_limit_requests:
+    if not allowed:
         raise RateLimitExceeded(
             f"Rate limit exceeded: {settings.rate_limit_requests} requests "
             f"per {settings.rate_limit_window_seconds}s"
         )
 
-    async with _redis.pipeline(transaction=True) as pipe:
-        pipe.zadd(key, {f"{now}:{id(now)}": now})
-        pipe.expire(key, settings.rate_limit_window_seconds)
-        await pipe.execute()
