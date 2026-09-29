@@ -45,21 +45,11 @@ services:
         value: gemini
       - key: GEMINI_API_KEY
         sync: false
-      - key: REDIS_HOST
+      - key: REDIS_URL
         fromService:
           type: redis
           name: recruiter-redis
-          property: host
-      - key: REDIS_PORT
-        fromService:
-          type: redis
-          name: recruiter-redis
-          property: port
-      - key: REDIS_PASSWORD
-        fromService:
-          type: redis
-          name: recruiter-redis
-          property: password
+          property: connectionString
       - key: QDRANT_HOST
         sync: false
       - key: QDRANT_PORT
@@ -88,10 +78,7 @@ services:
       - key: NODE_ENV
         value: production
       - key: GATEWAY_INTERNAL_URL
-        fromService:
-          type: web
-          name: recruiter-gateway
-          property: url
+        value: http://recruiter-gateway:10000
 
 # Managed Databases
 databases:

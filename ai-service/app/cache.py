@@ -19,17 +19,12 @@ import uuid
 
 from qdrant_client import QdrantClient
 from qdrant_client.http import models as qmodels
-import redis.asyncio as redis
 
 from app.config import settings
 from app.embeddings import embed
+from app.redis_client import build_redis_client
 
-_redis = redis.Redis(
-    host=settings.redis_host,
-    port=settings.redis_port,
-    password=settings.redis_password or None,
-    decode_responses=True,
-)
+_redis = build_redis_client()
 
 CORPUS_VERSION_KEY = "rag:corpus_version"
 LOCK_TTL_SECONDS = 30

@@ -6,16 +6,10 @@ via Lua script to eliminate race conditions between checking count and adding.
 import time
 import uuid
 
-import redis.asyncio as redis
-
 from app.config import settings
+from app.redis_client import build_redis_client
 
-_redis = redis.Redis(
-    host=settings.redis_host,
-    port=settings.redis_port,
-    password=settings.redis_password or None,
-    decode_responses=True,
-)
+_redis = build_redis_client()
 
 # Atomically prune expired entries, check current count, and append current timestamp
 LUA_SLIDING_WINDOW = """
