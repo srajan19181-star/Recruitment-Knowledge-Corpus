@@ -76,6 +76,30 @@
           "legendFormat": "median chunks used"
         }
       ]
+    },
+    {
+      "id": 6,
+      "title": "LLM Generation Errors",
+      "type": "stat",
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 18 },
+      "targets": [
+        {
+          "expr": "sum(rate(rag_llm_errors_total[5m]))",
+          "legendFormat": "Errors / sec"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "thresholds" },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "green", "value": null },
+              { "color": "red", "value": 0.01 }
+            ]
+          }
+        }
+      }
     }
   ]
 }

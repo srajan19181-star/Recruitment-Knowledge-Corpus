@@ -1,58 +1,161 @@
+version: "3.8"
+
 services:
-  qdrant:
-    image: qdrant/qdrant:v1.11.3
-    ports:
-      - "6333:6333"
+  postgres:
+    image: postgres:16-alpine
+    container_name: recruiter-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-postgres}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
+      POSTGRES_DB: ${POSTGRES_DB:-recruiter_copilot}
     volumes:
-      - qdrant_storage:/qdrant/storage
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d recruiter_copilot"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    networks:
+      - recruiter-net
 
   redis:
     image: redis:7-alpine
-    ports:
-      - "6379:6379"
-
-  api:
-    build: .
-    ports:
-      - "8000:8000"
-    env_file:
-      - .env
-    environment:
-      QDRANT_HOST: qdrant
-      REDIS_HOST: redis
-    depends_on:
-      - qdrant
-      - redis
+    container_name: recruiter-redis
+    restart: unless-stopped
+    command: ["redis-server", "--save", "", "--appendonly", "no"]
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
     volumes:
-      - ./data:/srv/data
+      - redis_data:/data
+    networks:
+      - recruiter-net
+
+  qdrant:
+    image: qdrant/qdrant:v1.11.3
+    container_name: recruiter-qdrant
+    restart: unless-stopped
+    volumes:
+      - qdrant_storage:/qdrant/storage
+    healthcheck:
+      test: ["CMD-SHELL", "cat /dev/null < /dev/tcp/127.0.0.1/6333 || exit 1"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+    networks:
+      - recruiter-net
+
+  ai-service:
+    build:
+      context: ./ai-service
+      dockerfile: Dockerfile
+    container_name: recruiter-ai-service
+    restart: unless-stopped
+    environment:
+      LLM_PROVIDER: ${LLM_PROVIDER:-mock}
+      GEMINI_API_KEY: ${GEMINI_API_KEY:-}
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      QDRANT_HOST: qdrant
+      QDRANT_PORT: 6333
+      CORPUS_DIR: /srv/data/corpus
+    volumes:
+      - ./ai-service/data:/srv/data
+    depends_on:
+      redis:
+        condition: service_healthy
+      qdrant:
+        condition: service_healthy
+    networks:
+      - recruiter-net
+
+  gateway:
+    build:
+      context: ./gateway
+      dockerfile: Dockerfile
+    container_name: recruiter-gateway
+    restart: unless-stopped
+    ports:
+      - "5000:5000"
+    environment:
+      PORT: 5000
+      NODE_ENV: production
+      DATABASE_URL: postgres://postgres:postgres@postgres:5432/recruiter_copilot
+      REDIS_URL: redis://redis:6379
+      AI_SERVICE_URL: http://ai-service:8000
+      JWT_SECRET: ${JWT_SECRET:-super-secret-jwt-key-replace-in-prod}
+      CORS_ORIGIN: http://localhost:3000
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      ai-service:
+        condition: service_started
+    networks:
+      - recruiter-net
+
+  web:
+    build:
+      context: ./web
+      dockerfile: Dockerfile
+    container_name: recruiter-web
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    environment:
+      PORT: 3000
+      NODE_ENV: production
+      GATEWAY_INTERNAL_URL: http://gateway:5000
+    depends_on:
+      - gateway
+    networks:
+      - recruiter-net
 
   prometheus:
     image: prom/prometheus:v2.55.1
+    container_name: recruiter-prometheus
+    restart: unless-stopped
     ports:
       - "9090:9090"
     volumes:
-      - ./monitoring/prometheus.yml:/etc/prometheus/prometheus.yml
+      - ./monitoring/prometheus.yml:/etc/prometheus/prometheus.yml:ro
       - prometheus_data:/prometheus
     depends_on:
-      - api
+      - ai-service
+    networks:
+      - recruiter-net
 
   grafana:
     image: grafana/grafana:11.3.1
+    container_name: recruiter-grafana
+    restart: unless-stopped
     ports:
-      - "3000:3000"
+      - "3001:3000"
     environment:
       GF_SECURITY_ADMIN_USER: admin
       GF_SECURITY_ADMIN_PASSWORD: admin
       GF_AUTH_ANONYMOUS_ENABLED: "true"
       GF_AUTH_ANONYMOUS_ORG_ROLE: Viewer
     volumes:
-      - ./monitoring/grafana/provisioning:/etc/grafana/provisioning
-      - ./monitoring/grafana/dashboards:/etc/grafana/provisioning/dashboards/json
+      - ./monitoring/grafana/provisioning:/etc/grafana/provisioning:ro
+      - ./monitoring/grafana/dashboards:/etc/grafana/provisioning/dashboards/json:ro
       - grafana_data:/var/lib/grafana
     depends_on:
       - prometheus
+    networks:
+      - recruiter-net
+
+networks:
+  recruiter-net:
+    driver: bridge
 
 volumes:
+  postgres_data:
+  redis_data:
   qdrant_storage:
   prometheus_data:
   grafana_data:
