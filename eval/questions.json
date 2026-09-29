@@ -1,0 +1,258 @@
+{
+  "retrieval_queries": [
+    {
+      "id": "q01",
+      "query": "What is the employee threshold for New York City Local Law 32 to apply?",
+      "expected_doc": "pay_transparency_nyc",
+      "expected_page": 1
+    },
+    {
+      "id": "q02",
+      "query": "Are open ended salary ranges like 100k and up permitted in New York City job ads?",
+      "expected_doc": "pay_transparency_nyc",
+      "expected_page": 1
+    },
+    {
+      "id": "q03",
+      "query": "What is the cure period for a first time pay transparency violation in NYC?",
+      "expected_doc": "pay_transparency_nyc",
+      "expected_page": 2
+    },
+    {
+      "id": "q04",
+      "query": "What maximum civil penalty can the NYC Commission on Human Rights impose?",
+      "expected_doc": "pay_transparency_nyc",
+      "expected_page": 2
+    },
+    {
+      "id": "q05",
+      "query": "What benefits disclosures are mandated under the Colorado Equal Pay for Equal Work Act?",
+      "expected_doc": "pay_transparency_colorado",
+      "expected_page": 1
+    },
+    {
+      "id": "q06",
+      "query": "Does Colorado law require stating when job applications are anticipated to close?",
+      "expected_doc": "pay_transparency_colorado",
+      "expected_page": 1
+    },
+    {
+      "id": "q07",
+      "query": "Are employers in Colorado allowed to ask candidates about their past wage rate history?",
+      "expected_doc": "pay_transparency_colorado",
+      "expected_page": 2
+    },
+    {
+      "id": "q08",
+      "query": "When must Colorado employers notify employees about internal promotional opportunities?",
+      "expected_doc": "pay_transparency_colorado",
+      "expected_page": 2
+    },
+    {
+      "id": "q09",
+      "query": "What employer size threshold triggers California SB 1162 pay scale posting rules?",
+      "expected_doc": "pay_transparency_california",
+      "expected_page": 1
+    },
+    {
+      "id": "q10",
+      "query": "How many years must California employers retain employee job title and wage rate records?",
+      "expected_doc": "pay_transparency_california",
+      "expected_page": 2
+    },
+    {
+      "id": "q11",
+      "query": "What are the statutory civil penalty amounts for pay scale violations in California?",
+      "expected_doc": "pay_transparency_california",
+      "expected_page": 2
+    },
+    {
+      "id": "q12",
+      "query": "Must third-party recruiters and job boards display pay scales for California positions?",
+      "expected_doc": "pay_transparency_california",
+      "expected_page": 1
+    },
+    {
+      "id": "q13",
+      "query": "Under Washington RCW 49.58.050, what employer size threshold requires wage scale disclosure?",
+      "expected_doc": "pay_transparency_washington",
+      "expected_page": 1
+    },
+    {
+      "id": "q14",
+      "query": "What state agency investigates equal pay transparency complaints in Washington?",
+      "expected_doc": "pay_transparency_washington",
+      "expected_page": 2
+    },
+    {
+      "id": "q15",
+      "query": "What statutory penalties range can be awarded for Washington EPOA violations?",
+      "expected_doc": "pay_transparency_washington",
+      "expected_page": 2
+    },
+    {
+      "id": "q16",
+      "query": "Why should companies avoid treating internal HR job descriptions as external job advertisements?",
+      "expected_doc": "job_ad_writing_best_practices",
+      "expected_page": 1
+    },
+    {
+      "id": "q17",
+      "query": "What is the recommended number of outcome-oriented bullets for core responsibilities?",
+      "expected_doc": "job_ad_writing_best_practices",
+      "expected_page": 1
+    },
+    {
+      "id": "q18",
+      "query": "How long do candidates typically scan a job posting before deciding to apply?",
+      "expected_doc": "job_ad_writing_best_practices",
+      "expected_page": 2
+    },
+    {
+      "id": "q19",
+      "query": "What application drop-off rate occurs when candidates are forced to re-enter resume details?",
+      "expected_doc": "job_ad_writing_best_practices",
+      "expected_page": 2
+    },
+    {
+      "id": "q20",
+      "query": "How do masculine-coded adjectives like ninja and aggressive affect female application rates?",
+      "expected_doc": "inclusive_language_and_bias_reduction",
+      "expected_page": 1
+    },
+    {
+      "id": "q21",
+      "query": "Why can phrases like digital native or recent graduate trigger ADEA age discrimination claims?",
+      "expected_doc": "inclusive_language_and_bias_reduction",
+      "expected_page": 2
+    },
+    {
+      "id": "q22",
+      "query": "What does research show regarding the qualification threshold percentage when men versus women apply?",
+      "expected_doc": "inclusive_language_and_bias_reduction",
+      "expected_page": 2
+    },
+    {
+      "id": "q23",
+      "query": "What is the formula used to calculate Cost-Per-Click in recruitment media buying?",
+      "expected_doc": "recruitment_marketing_fundamentals",
+      "expected_page": 1
+    },
+    {
+      "id": "q24",
+      "query": "How is Cost-Per-Application defined and calculated in talent acquisition marketing?",
+      "expected_doc": "recruitment_marketing_fundamentals",
+      "expected_page": 1
+    },
+    {
+      "id": "q25",
+      "query": "Why do unmanaged monthly job advertising budgets suffer from premature budget exhaustion?",
+      "expected_doc": "recruitment_marketing_fundamentals",
+      "expected_page": 2
+    },
+    {
+      "id": "q26",
+      "query": "What stages comprise the quantitative recruitment application conversion funnel?",
+      "expected_doc": "ats_and_application_funnel_metrics",
+      "expected_page": 1
+    },
+    {
+      "id": "q27",
+      "query": "What is the benchmark view-to-apply conversion rate for desktop versus mobile applicants?",
+      "expected_doc": "ats_and_application_funnel_metrics",
+      "expected_page": 1
+    },
+    {
+      "id": "q28",
+      "query": "What benchmark percentage is targeted for high-performing Offer Acceptance Rate?",
+      "expected_doc": "ats_and_application_funnel_metrics",
+      "expected_page": 2
+    },
+    {
+      "id": "q29",
+      "query": "What percentage of job seekers report sharing negative hiring experiences on Glassdoor or social media?",
+      "expected_doc": "candidate_experience_guidelines",
+      "expected_page": 1
+    },
+    {
+      "id": "q30",
+      "query": "What are the recommended communication SLAs for post-interview candidate debriefs?",
+      "expected_doc": "candidate_experience_guidelines",
+      "expected_page": 1
+    },
+    {
+      "id": "q31",
+      "query": "Why do structured interviews have significantly higher predictive validity than unstructured chats?",
+      "expected_doc": "structured_interviewing_and_rubrics",
+      "expected_page": 1
+    },
+    {
+      "id": "q32",
+      "query": "How is the STAR methodology applied in competency-based behavioral interviewing?",
+      "expected_doc": "structured_interviewing_and_rubrics",
+      "expected_page": 1
+    }
+  ],
+  "cache_sweep_pairs": [
+    {
+      "type": "paraphrase",
+      "q1": "What does NYC Local Law 32 require employers to include in job postings?",
+      "q2": "What does NYC Local Law 32 mandate employers disclose in job postings?",
+      "should_hit": true
+    },
+    {
+      "type": "paraphrase",
+      "q1": "Can employers in Colorado list open-ended salary ranges like $50k and up?",
+      "q2": "Can Colorado employers list open-ended salary ranges such as $50k and up?",
+      "should_hit": true
+    },
+    {
+      "type": "paraphrase",
+      "q1": "What are the Washington state pay transparency penalties for repeat violations?",
+      "q2": "What are the penalties in Washington state for repeat pay transparency violations?",
+      "should_hit": true
+    },
+    {
+      "type": "paraphrase",
+      "q1": "How do you calculate Cost-Per-Click in programmatic job advertising?",
+      "q2": "How is Cost Per Click calculated in programmatic job advertising?",
+      "should_hit": true
+    },
+    {
+      "type": "paraphrase",
+      "q1": "What are the mandatory salary disclosure rules for remote job postings in NYC?",
+      "q2": "In New York City, what pay range requirements apply to remote job listings?",
+      "should_hit": true
+    },
+    {
+      "type": "paraphrase",
+      "q1": "How does the Colorado Equal Pay Act regulate benefit disclosures in job ads?",
+      "q2": "What employment benefits must be posted in Colorado job descriptions under equal pay laws?",
+      "should_hit": true
+    },
+    {
+      "type": "near_miss",
+      "q1": "What is the civil penalty for pay transparency violations in New York City?",
+      "q2": "What is the civil penalty for pay transparency violations in California?",
+      "should_hit": false
+    },
+    {
+      "type": "near_miss",
+      "q1": "What is the employer size threshold for pay transparency in New York City?",
+      "q2": "What is the employer size threshold for pay transparency in Washington state?",
+      "should_hit": false
+    },
+    {
+      "type": "near_miss",
+      "q1": "How is Cost-Per-Click calculated in recruitment media?",
+      "q2": "How is Cost-Per-Hire calculated in recruitment media?",
+      "should_hit": false
+    },
+    {
+      "type": "near_miss",
+      "q1": "What is the benchmark view-to-apply rate on desktop?",
+      "q2": "What is the benchmark offer acceptance rate in recruiting?",
+      "should_hit": false
+    }
+  ]
+}
