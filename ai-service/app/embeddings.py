@@ -1,7 +1,7 @@
 """
 Local embedding model wrapper. Uses sentence-transformers so the project
-doesn't need a second paid API just to embed text — Anthropic's API is
-used for generation only, per the project's design.
+doesn't need a second paid API just to embed text. Generation is handled by
+the configured LLM provider (Gemini or Mock).
 """
 
 from functools import lru_cache
