@@ -1,8 +1,22 @@
+from pydantic import model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
 class Settings(BaseSettings):
     model_config = SettingsConfigDict(env_file=".env")
+
+    @model_validator(mode="after")
+    def _strip_whitespace(self) -> "Settings":
+        # Dashboard-managed env vars (e.g. Render's UI) are often pasted from
+        # a clipboard carrying a trailing newline. A newline in a string used
+        # as an HTTP header value (API keys, hosts) makes httpx/qdrant-client
+        # reject the request outright with LocalProtocolError, so strip every
+        # string field defensively rather than trusting exact input hygiene.
+        for field_name in self.model_fields:
+            value = getattr(self, field_name)
+            if isinstance(value, str):
+                setattr(self, field_name, value.strip())
+        return self
 
     # Provider: "gemini" or "mock"
     llm_provider: str = "mock"
