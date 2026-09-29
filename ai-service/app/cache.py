@@ -1,79 +1,163 @@
 """
-Semantic cache: the cache key is a similarity match on the query
-embedding against previously-answered queries, not the raw query string.
+Semantic cache: query embedding similarity matching backed by Qdrant.
 
-Two failure modes this is designed around:
-
-1. Near-miss false hits — a query embedding just below the similarity
-   threshold could return a wrong cached answer for a subtly different
-   question. CACHE_SIMILARITY_THRESHOLD defaults conservatively high
-   (0.95); tune with an eval set before lowering it.
-
-2. Cache stampede — many concurrent requests for the same novel query
-   would otherwise all miss the cache and all hit the LLM. A Redis lock
-   (single-flight) makes only the first caller compute the answer; the
-   rest wait on the lock and then read the freshly-written cache entry.
+Design considerations:
+1. Qdrant-backed similarity search: avoids pulling all cache entries into Python memory
+   and computing cosine similarities in the event loop.
+2. TTL & Expiration: points carry an `expires_at` payload timestamp, filtered out
+   at query time via Qdrant payload filters.
+3. Corpus versioning: each cache entry records `corpus_version`. Whenever new documents
+   are ingested, the version counter in Redis is bumped so stale answers are invalidated.
+4. Single-flight lock (CacheLock): prevents cache stampede when multiple concurrent callers
+   ask the same novel question.
 """
 
 import asyncio
 import hashlib
-import json
 import time
+import uuid
 
+from qdrant_client import QdrantClient
+from qdrant_client.http import models as qmodels
 import redis.asyncio as redis
 
 from app.config import settings
-from app.embeddings import cosine_similarity, embed
+from app.embeddings import embed
 
 _redis = redis.Redis(host=settings.redis_host, port=settings.redis_port, decode_responses=True)
 
-CACHE_INDEX_KEY = "semcache:index"  # hash of query_hash -> {embedding, answer, ts}
+CORPUS_VERSION_KEY = "rag:corpus_version"
 LOCK_TTL_SECONDS = 30
-LOCK_POLL_INTERVAL = 0.2
-LOCK_MAX_WAIT = 20
+LOCK_POLL_INTERVAL = 0.15
+LOCK_MAX_WAIT = 15.0
+
+
+def _get_qdrant_client() -> QdrantClient:
+    return QdrantClient(host=settings.qdrant_host, port=settings.qdrant_port)
 
 
 def _hash(text: str) -> str:
     return hashlib.sha256(text.encode("utf-8")).hexdigest()
 
 
+def ensure_cache_collection() -> None:
+    client = _get_qdrant_client()
+    try:
+        existing = [c.name for c in client.get_collections().collections]
+        if settings.qdrant_cache_collection not in existing:
+            client.create_collection(
+                collection_name=settings.qdrant_cache_collection,
+                vectors_config=qmodels.VectorParams(
+                    size=settings.embedding_dim,
+                    distance=qmodels.Distance.COSINE,
+                ),
+            )
+    except Exception:
+        # Client might not be ready during certain offline unit tests
+        pass
+
+
+async def get_corpus_version() -> int:
+    try:
+        val = await _redis.get(CORPUS_VERSION_KEY)
+        return int(val) if val is not None else 1
+    except Exception:
+        return 1
+
+
+async def bump_corpus_version() -> int:
+    try:
+        return await _redis.incr(CORPUS_VERSION_KEY)
+    except Exception:
+        return 1
+
+
 async def lookup(query: str) -> str | None:
-    """Return a cached answer if a sufficiently similar query was answered before."""
+    """Return a cached answer if a sufficiently similar query was answered before
+    for the current corpus version and has not expired."""
     query_vec = embed(query)
-    entries = await _redis.hgetall(CACHE_INDEX_KEY)
-
-    best_score, best_answer = 0.0, None
+    current_version = await get_corpus_version()
     now = time.time()
-    for raw in entries.values():
-        entry = json.loads(raw)
-        if now - entry["ts"] > settings.cache_ttl_seconds:
-            continue
-        score = cosine_similarity(query_vec, entry["embedding"])
-        if score > best_score:
-            best_score, best_answer = score, entry["answer"]
 
-    if best_score >= settings.cache_similarity_threshold:
-        return best_answer
+    query_filter = qmodels.Filter(
+        must=[
+            qmodels.FieldCondition(
+                key="corpus_version",
+                match=qmodels.MatchValue(value=current_version),
+            ),
+            qmodels.FieldCondition(
+                key="expires_at",
+                range=qmodels.Range(gt=now),
+            ),
+        ]
+    )
+
+    try:
+        client = _get_qdrant_client()
+        hits = client.search(
+            collection_name=settings.qdrant_cache_collection,
+            query_vector=query_vec,
+            query_filter=query_filter,
+            limit=1,
+        )
+        if hits and hits[0].score >= settings.cache_similarity_threshold:
+            return hits[0].payload.get("answer")
+    except Exception:
+        return None
+
     return None
 
 
 async def write(query: str, answer: str) -> None:
+    """Persist query embedding and answer with expiration and corpus version."""
     query_vec = embed(query)
-    entry = json.dumps({"embedding": query_vec, "answer": answer, "ts": time.time()})
-    await _redis.hset(CACHE_INDEX_KEY, _hash(query), entry)
+    current_version = await get_corpus_version()
+    point_id = str(uuid.uuid5(uuid.NAMESPACE_URL, f"cache:{query}"))
+
+    point = qmodels.PointStruct(
+        id=point_id,
+        vector=query_vec,
+        payload={
+            "query": query,
+            "answer": answer,
+            "expires_at": time.time() + settings.cache_ttl_seconds,
+            "corpus_version": current_version,
+        },
+    )
+
+    try:
+        client = _get_qdrant_client()
+        client.upsert(collection_name=settings.qdrant_cache_collection, points=[point])
+    except Exception:
+        pass
+
+
+def cleanup_expired() -> None:
+    """Prunes expired cache entries from Qdrant."""
+    try:
+        client = _get_qdrant_client()
+        now = time.time()
+        client.delete(
+            collection_name=settings.qdrant_cache_collection,
+            points_selector=qmodels.FilterSelector(
+                filter=qmodels.Filter(
+                    must=[
+                        qmodels.FieldCondition(
+                            key="expires_at",
+                            range=qmodels.Range(lt=now),
+                        )
+                    ]
+                )
+            ),
+        )
+    except Exception:
+        pass
 
 
 class CacheLock:
     """
-    Single-flight lock keyed by query hash. Use as:
-
-        async with CacheLock(query) as acquired:
-            if acquired:
-                # this caller computes the answer and writes the cache
-                ...
-            else:
-                # another caller is already computing it; re-check cache
-                answer = await lookup(query)
+    Single-flight lock keyed by query hash. Ensures only the first caller computes
+    the answer, while concurrent callers wait and then re-read the cache.
     """
 
     def __init__(self, query: str):
@@ -83,13 +167,20 @@ class CacheLock:
     async def __aenter__(self) -> bool:
         waited = 0.0
         while waited < LOCK_MAX_WAIT:
-            self.acquired = await _redis.set(self.key, "1", nx=True, ex=LOCK_TTL_SECONDS)
-            if self.acquired:
+            try:
+                self.acquired = bool(await _redis.set(self.key, "1", nx=True, ex=LOCK_TTL_SECONDS))
+                if self.acquired:
+                    return True
+            except Exception:
                 return True
             await asyncio.sleep(LOCK_POLL_INTERVAL)
             waited += LOCK_POLL_INTERVAL
-        return False  # gave up waiting; caller should compute anyway
+        return False
 
     async def __aexit__(self, *exc):
         if self.acquired:
-            await _redis.delete(self.key)
+            try:
+                await _redis.delete(self.key)
+            except Exception:
+                pass
+

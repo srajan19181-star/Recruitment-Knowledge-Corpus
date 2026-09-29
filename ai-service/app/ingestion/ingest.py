@@ -37,5 +37,12 @@ def ingest_directory(path: str) -> int:
     print("Building BM25 index...")
     build_index(all_chunks)
 
+    try:
+        import asyncio
+        from app.cache import bump_corpus_version
+        asyncio.run(bump_corpus_version())
+    except Exception:
+        pass
+
     print(f"Done. Ingested {len(all_chunks)} chunks from {len(pdf_paths)} documents.")
     return len(all_chunks)
