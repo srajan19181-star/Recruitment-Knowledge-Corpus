@@ -42,27 +42,34 @@ def timed_stage(name: str):
 CORPUS_DIR = Path(__file__).resolve().parent.parent / "data" / "corpus"
 
 
-@asynccontextmanager
-async def lifespan(app: FastAPI):
-    # Startup sequence
-    dense.ensure_collection()
-    cache.ensure_cache_collection()
-    sparse.load_index()
-
-    # Re-ingest the bundled corpus on every boot. Chunk IDs are content-hashed
-    # (see chunking.py), so this is a safe idempotent upsert rather than a
-    # duplication risk. This keeps retrieval populated on hosts with no
-    # persistent disk (e.g. free-tier instances), where a separately-run
-    # ingestion script's on-disk BM25 index would otherwise vanish on restart.
+async def _background_startup_tasks() -> None:
+    """Runs the slow, non-critical startup work (corpus ingestion, Gemini
+    model validation) after the app is already accepting connections, so a
+    slow embedding-model load or a live Gemini API round-trip can never
+    block uvicorn from binding its port - which platforms like Render treat
+    as a deploy failure ("No open ports detected") if it takes too long."""
     if CORPUS_DIR.exists() and any(CORPUS_DIR.glob("*.pdf")):
         try:
-            ingest_directory(str(CORPUS_DIR), bump_version=False)
+            await asyncio.to_thread(ingest_directory, str(CORPUS_DIR), False)
             await cache.bump_corpus_version()
         except Exception as e:
             print(f"Startup corpus ingestion failed (continuing with existing index): {e}")
 
     if settings.llm_provider == "gemini":
-        await validate_gemini_model()
+        try:
+            await validate_gemini_model()
+        except Exception as e:
+            print(f"Gemini model validation failed (will surface again on first real query): {e}")
+
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    # Startup sequence - kept fast so the port opens immediately.
+    dense.ensure_collection()
+    cache.ensure_cache_collection()
+    sparse.load_index()
+
+    asyncio.create_task(_background_startup_tasks())
 
     yield
     # Shutdown sequence
