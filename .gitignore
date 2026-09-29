@@ -6,6 +6,10 @@ venv/
 data/corpus/*
 !data/corpus/.gitkeep
 data/bm25_index.pkl
+data/bm25_index.json
+ai-service/data/corpus/*
+!ai-service/data/corpus/.gitkeep
+ai-service/data/bm25_index.json
 *.log
 .pytest_cache/
 .ruff_cache/
