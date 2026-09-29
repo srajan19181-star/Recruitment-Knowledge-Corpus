@@ -9,7 +9,7 @@ services:
     env: node
     plan: free
     rootDir: gateway
-    buildCommand: npm ci && npm run build
+    buildCommand: npm ci --include=dev && npm run build
     startCommand: npm start
     envVars:
       - key: NODE_ENV
@@ -80,7 +80,7 @@ services:
     env: node
     plan: free
     rootDir: web
-    buildCommand: npm ci && npm run build
+    buildCommand: npm ci --include=dev && npm run build
     startCommand: npm start
     envVars:
       - key: NODE_ENV
