@@ -7,7 +7,7 @@ services:
   - type: web
     name: recruiter-gateway
     env: node
-    plan: starter
+    plan: free
     rootDir: gateway
     buildCommand: npm ci && npm run build
     startCommand: npm start
@@ -36,7 +36,7 @@ services:
   - type: pserv
     name: recruiter-ai-service
     env: python
-    plan: standard
+    plan: free
     rootDir: ai-service
     buildCommand: pip install -r requirements.txt
     startCommand: uvicorn app.main:app --host 0.0.0.0 --port 8000
@@ -62,7 +62,7 @@ services:
   # 3. Managed In-Memory Redis Cache
   - type: redis
     name: recruiter-redis
-    plan: starter
+    plan: free
     ipAllowList: []
     maxmemoryPolicy: allkeys-lru
 
@@ -70,7 +70,7 @@ services:
   - type: web
     name: recruiter-web
     env: node
-    plan: starter
+    plan: free
     rootDir: web
     buildCommand: npm ci && npm run build
     startCommand: npm start
@@ -83,6 +83,6 @@ services:
 # Managed Databases
 databases:
   - name: recruiter-postgres
-    plan: starter
+    plan: free
     databaseName: recruiter_copilot
     user: recruiter_admin
