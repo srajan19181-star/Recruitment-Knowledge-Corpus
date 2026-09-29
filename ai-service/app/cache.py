@@ -24,7 +24,12 @@ import redis.asyncio as redis
 from app.config import settings
 from app.embeddings import embed
 
-_redis = redis.Redis(host=settings.redis_host, port=settings.redis_port, decode_responses=True)
+_redis = redis.Redis(
+    host=settings.redis_host,
+    port=settings.redis_port,
+    password=settings.redis_password or None,
+    decode_responses=True,
+)
 
 CORPUS_VERSION_KEY = "rag:corpus_version"
 LOCK_TTL_SECONDS = 30
@@ -33,7 +38,12 @@ LOCK_MAX_WAIT = 15.0
 
 
 def _get_qdrant_client() -> QdrantClient:
-    return QdrantClient(host=settings.qdrant_host, port=settings.qdrant_port)
+    return QdrantClient(
+        host=settings.qdrant_host,
+        port=settings.qdrant_port,
+        api_key=settings.qdrant_api_key or None,
+        https=settings.qdrant_https,
+    )
 
 
 def _hash(text: str) -> str:

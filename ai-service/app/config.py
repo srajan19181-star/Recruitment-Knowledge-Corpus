@@ -15,12 +15,15 @@ class Settings(BaseSettings):
     # Qdrant
     qdrant_host: str = "qdrant"
     qdrant_port: int = 6333
+    qdrant_api_key: str = ""
+    qdrant_https: bool = False
     qdrant_collection: str = "rag_chunks"
     qdrant_cache_collection: str = "semantic_cache"
 
     # Redis
     redis_host: str = "redis"
     redis_port: int = 6379
+    redis_password: str = ""
 
     # Embeddings
     embedding_model: str = "all-MiniLM-L6-v2"

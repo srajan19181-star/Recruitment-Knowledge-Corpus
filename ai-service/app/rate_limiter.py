@@ -10,7 +10,12 @@ import redis.asyncio as redis
 
 from app.config import settings
 
-_redis = redis.Redis(host=settings.redis_host, port=settings.redis_port, decode_responses=True)
+_redis = redis.Redis(
+    host=settings.redis_host,
+    port=settings.redis_port,
+    password=settings.redis_password or None,
+    decode_responses=True,
+)
 
 # Atomically prune expired entries, check current count, and append current timestamp
 LUA_SLIDING_WINDOW = """

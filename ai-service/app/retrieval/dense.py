@@ -5,7 +5,12 @@ from app.config import settings
 from app.embeddings import embed
 from app.models import Chunk
 
-_client = QdrantClient(host=settings.qdrant_host, port=settings.qdrant_port)
+_client = QdrantClient(
+    host=settings.qdrant_host,
+    port=settings.qdrant_port,
+    api_key=settings.qdrant_api_key or None,
+    https=settings.qdrant_https,
+)
 
 
 def ensure_collection() -> None:

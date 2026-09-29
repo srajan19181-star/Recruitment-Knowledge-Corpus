@@ -58,10 +58,19 @@ services:
           type: redis
           name: recruiter-redis
           property: port
+      - key: REDIS_PASSWORD
+        fromService:
+          type: redis
+          name: recruiter-redis
+          property: password
       - key: QDRANT_HOST
         sync: false
       - key: QDRANT_PORT
         value: 6333
+      - key: QDRANT_API_KEY
+        sync: false
+      - key: QDRANT_HTTPS
+        value: true
 
   # 3. Web Frontend (Next.js Standalone on Render - or deploy directly to Vercel)
   - type: web
