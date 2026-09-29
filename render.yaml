@@ -26,7 +26,7 @@ services:
           name: recruiter-redis
           property: connectionString
       - key: AI_SERVICE_URL
-        value: http://recruiter-ai-service:8000
+        value: https://recruiter-ai-service.onrender.com
       - key: JWT_SECRET
         generateValue: true
       - key: CORS_ORIGIN
@@ -88,7 +88,7 @@ services:
       - key: NODE_ENV
         value: production
       - key: GATEWAY_INTERNAL_URL
-        value: http://recruiter-gateway:10000
+        value: https://recruiter-gateway.onrender.com
 
 # Managed Databases
 databases:
