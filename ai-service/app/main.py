@@ -43,11 +43,30 @@ CORPUS_DIR = Path(__file__).resolve().parent.parent / "data" / "corpus"
 
 
 async def _background_startup_tasks() -> None:
-    """Runs the slow, non-critical startup work (corpus ingestion, Gemini
-    model validation) after the app is already accepting connections, so a
-    slow embedding-model load or a live Gemini API round-trip can never
-    block uvicorn from binding its port - which platforms like Render treat
-    as a deploy failure ("No open ports detected") if it takes too long."""
+    """Runs ALL startup connectivity checks and initialization (Qdrant,
+    semantic cache collection, BM25 index load, corpus ingestion, Gemini
+    model validation) after the app is already accepting connections.
+    Nothing here may block port binding: a single slow or unreachable
+    dependency (e.g. a remote Qdrant Cloud cluster over the internet on a
+    free-tier instance) must never prevent uvicorn from opening its port,
+    which platforms like Render treat as an outright deploy failure
+    ("No open ports detected") if it takes too long. Every step is
+    independently try/excepted so one failure doesn't skip the rest."""
+    try:
+        dense.ensure_collection()
+    except Exception as e:
+        print(f"Startup: Qdrant collection check failed: {e}")
+
+    try:
+        cache.ensure_cache_collection()
+    except Exception as e:
+        print(f"Startup: semantic cache collection check failed: {e}")
+
+    try:
+        sparse.load_index()
+    except Exception as e:
+        print(f"Startup: BM25 index load failed: {e}")
+
     if CORPUS_DIR.exists() and any(CORPUS_DIR.glob("*.pdf")):
         try:
             await asyncio.to_thread(ingest_directory, str(CORPUS_DIR), False)
@@ -64,11 +83,8 @@ async def _background_startup_tasks() -> None:
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    # Startup sequence - kept fast so the port opens immediately.
-    dense.ensure_collection()
-    cache.ensure_cache_collection()
-    sparse.load_index()
-
+    # Nothing blocks here - the port must open immediately regardless of
+    # dependency health. See _background_startup_tasks for why.
     asyncio.create_task(_background_startup_tasks())
 
     yield
