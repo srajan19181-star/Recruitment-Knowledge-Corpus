@@ -52,9 +52,11 @@ services:
       - key: PORT
         value: 8000
       - key: LLM_PROVIDER
-        value: mock
+        value: gemini
       - key: GEMINI_API_KEY
         sync: false
+      - key: GEMINI_MODEL
+        value: gemini-3.6-flash
       - key: REDIS_URL
         fromService:
           type: redis
