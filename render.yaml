@@ -26,17 +26,14 @@ services:
           name: recruiter-redis
           property: connectionString
       - key: AI_SERVICE_URL
-        fromService:
-          type: pservice
-          name: recruiter-ai-service
-          property: host
+        value: http://recruiter-ai-service:8000
       - key: JWT_SECRET
         generateValue: true
       - key: CORS_ORIGIN
         sync: false
 
   # 2. AI Service (Private Python / FastAPI Service - Not exposed to public internet)
-  - type: pservice
+  - type: pserv
     name: recruiter-ai-service
     env: python
     plan: standard
