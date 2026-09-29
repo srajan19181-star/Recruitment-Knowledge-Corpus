@@ -69,7 +69,14 @@ services:
       - key: QDRANT_HTTPS
         value: true
 
-  # 3. Web Frontend (Next.js Standalone on Render - or deploy directly to Vercel)
+  # 3. Managed In-Memory Redis Cache
+  - type: redis
+    name: recruiter-redis
+    plan: starter
+    ipAllowList: []
+    maxmemoryPolicy: allkeys-lru
+
+  # 4. Web Frontend (Next.js Standalone on Render - or deploy directly to Vercel)
   - type: web
     name: recruiter-web
     env: node
@@ -92,9 +99,3 @@ databases:
     plan: starter
     databaseName: recruiter_copilot
     user: recruiter_admin
-
-# Managed In-Memory Redis Cache
-redis:
-  - name: recruiter-redis
-    plan: starter
-    maxmemoryPolicy: allkeys-lru
